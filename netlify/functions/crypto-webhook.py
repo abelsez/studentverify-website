@@ -10,7 +10,7 @@ def send_email(to_email, subject, html_content):
     try:
         smtp_server = "smtp.gmail.com"
         smtp_port = 587
-        sender_email = "orders@fastdiscountfinder.com"
+        sender_email = "sheeredudeals@gmail.com"
         sender_password = os.environ.get('EMAIL_PASSWORD')
         
         msg = MIMEMultipart('alternative')
@@ -73,8 +73,7 @@ def handler(event, context):
             """
             
             # Send order notification
-            send_email('orders@fastdiscountfinder.com', f'New Crypto Order - {payment_id}', order_html)
-        
+            send_email("sheeredudeals@gmail.com", f"New Crypto Order - {payment_id}", order_html)        
         return {
             'statusCode': 200,
             'headers': headers,
