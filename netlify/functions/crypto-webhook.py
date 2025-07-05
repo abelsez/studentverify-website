@@ -1,0 +1,90 @@
+import json
+import smtplib
+import os
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime
+
+def send_email(to_email, subject, html_content):
+    """Send email using SMTP"""
+    try:
+        smtp_server = "smtp.gmail.com"
+        smtp_port = 587
+        sender_email = "orders@fastdiscountfinder.com"
+        sender_password = os.environ.get('EMAIL_PASSWORD')
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = sender_email
+        msg['To'] = to_email
+        
+        html_part = MIMEText(html_content, 'html')
+        msg.attach(html_part)
+        
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        
+        return True
+    except Exception as e:
+        print(f"Email sending failed: {str(e)}")
+        return False
+
+def handler(event, context):
+    # Set CORS headers
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    }
+    
+    # Handle preflight OPTIONS request
+    if event['httpMethod'] == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': ''
+        }
+    
+    try:
+        # Parse request body
+        body = json.loads(event['body'])
+        
+        if body.get('payment_status') == 'finished':
+            # Payment successful, send confirmation email
+            payment_id = body.get('payment_id')
+            amount = body.get('price_amount', 0)
+            currency = body.get('pay_currency', 'crypto')
+            
+            # Order notification to orders@fastdiscountfinder.com
+            order_html = f"""
+            <html>
+            <body>
+                <h2>New Crypto Order Received</h2>
+                <p><strong>Payment ID:</strong> {payment_id}</p>
+                <p><strong>Amount:</strong> {amount} {currency.upper()}</p>
+                <p><strong>Product:</strong> Student Verification Service</p>
+                <p><strong>Date:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><strong>Payment Method:</strong> Cryptocurrency</p>
+            </body>
+            </html>
+            """
+            
+            # Send order notification
+            send_email('orders@fastdiscountfinder.com', f'New Crypto Order - {payment_id}', order_html)
+        
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({'status': 'ok'})
+        }
+        
+    except Exception as e:
+        return {
+            'statusCode': 400,
+            'headers': headers,
+            'body': json.dumps({'error': str(e)})
+        }
+
