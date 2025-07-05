@@ -1,13 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button.jsx'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
 import { Input } from '@/components/ui/input.jsx'
 import { Badge } from '@/components/ui/badge.jsx'
 import { CheckCircle, GraduationCap, Shield, Star, Search, ExternalLink } from 'lucide-react'
+import PaymentModal from './components/PaymentModal.jsx'
+import ThankYouPage from './components/ThankYouPage.jsx'
 import './App.css'
 
 function App() {
   const [searchTerm, setSearchTerm] = useState('')
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [currentPage, setCurrentPage] = useState('home')
+
+  // Check URL for routing
+  useEffect(() => {
+    const path = window.location.pathname
+    if (path === '/thank-you') {
+      setCurrentPage('thank-you')
+    } else if (path === '/checkout') {
+      setCurrentPage('checkout')
+    } else {
+      setCurrentPage('home')
+    }
+  }, [])
 
   const studentDiscounts = [
     {
@@ -66,10 +83,68 @@ function App() {
     }
   ]
 
+  const subscriptionPlans = [
+    {
+      id: 'basic',
+      name: 'StudentVerify Basic',
+      price: 9.99,
+      features: ['Access to 100+ verified discounts', 'Email support', 'Mobile app access'],
+      popular: false
+    },
+    {
+      id: 'premium',
+      name: 'StudentVerify Premium',
+      price: 19.99,
+      features: ['Access to 500+ verified discounts', 'Priority support', 'Mobile app access', 'Exclusive deals', 'Early access to new discounts'],
+      popular: true
+    },
+    {
+      id: 'lifetime',
+      name: 'StudentVerify Lifetime',
+      price: 99.99,
+      features: ['Lifetime access to all discounts', 'Priority support', 'Mobile app access', 'Exclusive deals', 'Early access to new discounts', 'No recurring fees'],
+      popular: false
+    }
+  ]
+
   const filteredDiscounts = studentDiscounts.filter(discount =>
     discount.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
     discount.category.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handleGetDiscount = (discount) => {
+    // Show subscription modal instead of direct discount
+    setShowPaymentModal(true)
+    setSelectedProduct(subscriptionPlans[1]) // Default to premium plan
+  }
+
+  const handleSubscribe = (plan) => {
+    setSelectedProduct(plan)
+    setShowPaymentModal(true)
+  }
+
+  // Abandoned cart tracking
+  useEffect(() => {
+    let abandonedCartTimer
+    
+    if (showPaymentModal) {
+      // Set timer for 5 minutes (300000ms) for abandoned cart
+      abandonedCartTimer = setTimeout(() => {
+        // Send abandoned cart email (you might want to collect email first)
+        console.log('Abandoned cart detected')
+      }, 300000)
+    }
+
+    return () => {
+      if (abandonedCartTimer) {
+        clearTimeout(abandonedCartTimer)
+      }
+    }
+  }, [showPaymentModal])
+
+  if (currentPage === 'thank-you') {
+    return <ThankYouPage />
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -136,6 +211,51 @@ function App() {
         </div>
       </section>
 
+      {/* Subscription Plans */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
+            Choose Your Plan
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {subscriptionPlans.map((plan) => (
+              <Card key={plan.id} className={`relative ${plan.popular ? 'ring-2 ring-blue-500' : ''}`}>
+                {plan.popular && (
+                  <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-blue-500">
+                    Most Popular
+                  </Badge>
+                )}
+                <CardHeader className="text-center">
+                  <CardTitle className="text-xl">{plan.name}</CardTitle>
+                  <div className="text-3xl font-bold text-blue-600">
+                    ${plan.price}
+                    {plan.id !== 'lifetime' && <span className="text-sm text-gray-500">/month</span>}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 mb-6">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-center space-x-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    onClick={() => handleSubscribe(plan)}
+                    className={`w-full ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                    variant={plan.popular ? 'default' : 'outline'}
+                  >
+                    Get Started
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Featured Discounts */}
       <section className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -173,7 +293,7 @@ function App() {
                         <Star className="h-4 w-4 text-yellow-400 fill-current" />
                         <span className="text-sm text-gray-600">{discount.rating}</span>
                       </div>
-                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => handleGetDiscount(discount)}>
                         Get Discount
                         <ExternalLink className="h-3 w-3 ml-1" />
                       </Button>
@@ -198,9 +318,9 @@ function App() {
               <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <GraduationCap className="h-8 w-8 text-blue-600" />
               </div>
-              <h4 className="text-lg font-semibold mb-2">1. Verify Student Status</h4>
+              <h4 className="text-lg font-semibold mb-2">1. Choose Your Plan</h4>
               <p className="text-gray-600">
-                Upload your student ID or enrollment documents for instant verification
+                Select the subscription plan that best fits your needs and budget
               </p>
             </div>
             
@@ -208,9 +328,9 @@ function App() {
               <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="h-8 w-8 text-green-600" />
               </div>
-              <h4 className="text-lg font-semibold mb-2">2. Get Verified</h4>
+              <h4 className="text-lg font-semibold mb-2">2. Verify Student Status</h4>
               <p className="text-gray-600">
-                Our secure verification process confirms your student status within minutes
+                Upload your student ID or enrollment documents for instant verification
               </p>
             </div>
             
@@ -236,8 +356,12 @@ function App() {
           <p className="text-xl text-blue-100 mb-8">
             Join thousands of students already saving with StudentVerify
           </p>
-          <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
-            Verify Student Status
+          <Button 
+            size="lg" 
+            className="bg-white text-blue-600 hover:bg-gray-100"
+            onClick={() => handleSubscribe(subscriptionPlans[1])}
+          >
+            Get Started Today
           </Button>
         </div>
       </section>
@@ -289,6 +413,13 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* Payment Modal */}
+      <PaymentModal 
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        product={selectedProduct}
+      />
     </div>
   )
 }
